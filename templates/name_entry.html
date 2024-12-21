@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>회식 날짜와 식당 정하기</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f4f6;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .form-container {
+            background: #ffffff;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+        }
+        input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+            color: #333;
+        }
+        button {
+            background: #4CAF50;
+            color: #fff;
+            padding: 12px;
+            font-size: 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s ease;
+        }
+        button:hover {
+            background: #45a049;
+        }
+    </style>
+    <script>
+        const validExtensions = {
+            "김상은": "172",
+            "김서정": "293",
+            "이찬": "185",
+            "황유림": "042",
+            "이현아": "025",
+            "유정화": "051",
+            "박종현": "175",
+            "김지수": "071",
+            "박지원": "174",
+            "임하경": "226"
+        };
+
+        function validateForm(event) {
+            const name = document.getElementById("name").value.trim();
+            const extension = document.getElementById("extension").value.trim();
+
+            if (!validExtensions[name] || validExtensions[name] !== extension) {
+                alert("이름과 내선 번호가 일치하지 않습니다. 다시 확인해주세요.");
+                event.preventDefault(); // 폼 제출 방지
+                return false;
+            }
+
+            alert("유효한 사용자입니다! 계속 진행합니다.");
+            return true;
+        }
+    </script>
+</head>
+<body>
+    <div class="form-container">
+        <h1>회식 날짜와 식당 정하기</h1>
+        <form method="POST" onsubmit="validateForm(event)">
+            <label for="name">이름 입력:</label>
+            <input type="text" id="name" name="name" placeholder="이름을 입력하세요" required>
+            <label for="extension">내선 번호 입력:</label>
+            <input type="text" id="extension" name="extension" placeholder="내선 번호를 입력하세요" required>
+            <button type="submit">확인</button>
+        </form>
+    </div>
+</body>
+</html>
+

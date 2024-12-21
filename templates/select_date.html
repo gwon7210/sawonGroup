@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>날짜 선택</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f3f4f6;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .day {
+            padding: 15px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            transition: all 0.3s;
+        }
+        .day[data-availability="0"] { background-color: hsl(120, 100%, 95%); }
+        .day[data-availability="1"] { background-color: hsl(120, 80%, 85%); }
+        .day[data-availability="2"] { background-color: hsl(120, 70%, 75%); }
+        .day[data-availability="3"] { background-color: hsl(120, 60%, 65%); }
+        .day[data-availability="4"] { background-color: hsl(120, 55%, 55%); }
+        .day[data-availability="5"] { background-color: hsl(120, 50%, 50%); }
+        .day[data-availability="6"] { background-color: hsl(120, 45%, 45%); }
+        .day[data-availability="7"] { background-color: hsl(120, 40%, 40%); }
+        .day[data-availability="8"] { background-color: hsl(120, 35%, 35%); }
+        .day[data-availability="9"] { background-color: hsl(120, 30%, 30%); }
+        .day[data-availability="10"] { background-color: hsl(120, 25%, 25%); }
+        .day[data-availability="11"] { background-color: hsl(120, 20%, 20%); }
+        .day[data-availability="12"] { background-color: hsl(120, 15%, 15%); }
+        .day.selected {
+            border: 2px solid #ff5722;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button.hidden {
+            display: none;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+    <script>
+        function toggleDate(day) {
+            const checkbox = document.getElementById(`checkbox-${day}`);
+            const dayElement = document.getElementById(`day-${day}`);
+            checkbox.checked = !checkbox.checked;
+            if (checkbox.checked) {
+                dayElement.classList.add("selected");
+            } else {
+                dayElement.classList.remove("selected");
+            }
+        }
+
+        function checkDatesSelected(event) {
+            const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+            const anyChecked = Array.from(checkboxes).some(checkbox => checkbox.checked);
+
+            if (!anyChecked) {
+                alert("날짜 선택 먼저 해주세요!");
+                event.preventDefault();
+                return false;
+            }
+
+            // 상태를 localStorage에 저장
+            localStorage.setItem('voteCompleted', 'true');
+            updateRecommendButtonVisibility();
+            return true;
+        }
+
+        function updateRecommendButtonVisibility() {
+            const recommendButton = document.getElementById("recommend-button");
+            const voteCompleted = localStorage.getItem('voteCompleted') === 'true';
+
+            if (voteCompleted) {
+                recommendButton.classList.remove("hidden");
+            } else {
+                recommendButton.classList.add("hidden");
+            }
+        }
+
+        // 페이지 로드 시 버튼 상태 업데이트
+        window.onload = function () {
+            updateRecommendButtonVisibility();
+        };
+    </script>
+</head>
+<body>
+    <h1>{{ name }}님, 날짜를 선택하세요</h1>
+    <form method="POST" onsubmit="return checkDatesSelected(event)">
+        <div class="calendar">
+            {% for date, count in availability.items() %}
+                <div 
+                    class="day" 
+                    id="day-{{ date }}" 
+                    data-availability="{{ count }}" 
+                    onclick="toggleDate('{{ date }}')">
+                    {{ date }}<br>
+                    가능 인원: {{ count }}
+                    <input type="checkbox" name="dates" value="{{ date }}" id="checkbox-{{ date }}" style="display: none;">
+                </div>
+            {% endfor %}
+        </div>
+        <button type="submit">날짜 투표 적용</button>
+    </form>
+    <form action="{{ url_for('recommend_restaurant', name=name) }}" method="GET">
+        <button id="recommend-button" type="submit" class="hidden">식당 추천으로 이동</button>
+    </form>
+</body>
+</html>
+

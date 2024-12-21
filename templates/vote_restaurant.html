@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>식당 투표</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            text-align: center;
+            padding: 8px;
+        }
+        th {
+            background-color: #f8f9fa;
+        }
+        tbody tr {
+            transition: background-color 0.5s ease, transform 0.3s ease;
+        }
+        tbody tr.updated {
+            background-color: #d4edda;
+            transform: scale(1.02);
+        }
+        button {
+            background-color: #28a745;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #218838;
+        }
+        a {
+            color: #007bff;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+    <script>
+        function highlightUpdatedRows() {
+            const rows = document.querySelectorAll("tbody tr");
+            rows.forEach((row) => {
+                row.classList.add("updated");
+                setTimeout(() => {
+                    row.classList.remove("updated");
+                }, 1000); // 1초 후 강조 효과 제거
+            });
+        }
+
+        // 페이지 로드 시 강조 효과
+        window.onload = highlightUpdatedRows;
+    </script>
+</head>
+<body>
+    <h1>{{ name }}님, 좋아하는 식당에 투표하거나 취소하세요</h1>
+    {% if restaurants %}
+    <form method="POST">
+        <table>
+            <thead>
+                <tr>
+                    <th>식당 이름</th>
+                    <th>식당 종류</th>
+                    <th>투표 수</th>
+                    <th>선택</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for restaurant in restaurants %}
+                <tr>
+                    <td>
+                        <a href="{{ restaurant.link }}" target="_blank">{{ restaurant.name }}</a>
+                    </td>
+                    <td>{{ restaurant.type }}</td>
+                    <td>{{ restaurant.votes }}</td>
+                    <td>
+                        <button 
+                            type="submit" 
+                            name="selected_restaurant" 
+                            value="{{ restaurant.link }}">
+                            {% if name in restaurant.voters %}
+                                취소
+                            {% else %}
+                                투표
+                            {% endif %}
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </form>
+    {% else %}
+    <p>아직 추천된 식당이 없네요 :)</p>
+    {% endif %}
+</body>
+</html>
+
