@@ -42,10 +42,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>참여 여부를 선택하세요</h1>
+        <h1>현재 상태: {{ current_status | capitalize }}</h1>
         <form method="POST">
-            <button type="submit" name="choice" value="participate">식사 모임 참여</button>
-            <button type="submit" name="choice" value="not_participate">식사 모임 미참여</button>
+            <button type="submit" name="choice" value="participate">참여로 변경</button>
+            <button type="submit" name="choice" value="not_participate">미참여로 변경</button>
         </form>
     </div>
 </body>
