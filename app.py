@@ -20,10 +20,25 @@ def name_entry():
     if request.method == "POST":
         name = request.form.get("name")
         if name in valid_names:
+            # 날짜 선택 기록 확인
+            if name not in votes or not votes[name]:
+                return redirect(url_for("participation_choice", name=name))
             return redirect(url_for("select_date", name=name))
         else:
             flash("등록된 사용자가 아닙니다.")
     return render_template("name_entry.html")
+
+@app.route("/participation_choice/<name>", methods=["GET", "POST"])
+def participation_choice(name):
+    if request.method == "POST":
+        choice = request.form.get("choice")
+        if choice == "participate":
+            return redirect(url_for("select_date", name=name))
+        elif choice == "not_participate":
+            flash("식사 모임에 참여하지 않습니다.")
+            return redirect(url_for("name_entry"))
+    return render_template("participation_choice.html", name=name)
+
 
 @app.route("/select_date/<name>", methods=["GET", "POST"])
 def select_date(name):
