@@ -13,6 +13,15 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "name_entry"  # 로그인되지 않은 사용자가 접근 시 리디렉션할 뷰
 
+
+# 각 날짜별 가능한 사람 수
+availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
+
+# 식당 추천 및 투표
+restaurants = []  # [{"link": "http://example.com", "type": "중식당", "votes": 0, "voters": []}]
+restaurant_votes = {}
+
+
 # Flask-Login 사용자 모델 정의
 class User(UserMixin, db.Model):  # UserMixin 추가
     id = db.Column(db.Integer, primary_key=True)
@@ -23,9 +32,16 @@ class User(UserMixin, db.Model):  # UserMixin 추가
     def get_id(self):
         return str(self.id)  # 사용자 고유 ID 반환
 
+# Vote 모델 정의
+class Vote(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    date = db.Column(db.String(20), nullable=False)
+
+
 # 데이터베이스 초기화
 with app.app_context():
-    
+
     # 기존 데이터베이스 삭제 (드롭)
     db.drop_all()
     db.create_all()
@@ -90,7 +106,7 @@ def participation_choice():
         choice = request.form.get("choice")
         current_user.status = choice  # 현재 사용자 상태 업데이트
         db.session.commit()  # 데이터베이스에 변경사항 저장
-        return redirect(url_for("participation_choice"))
+        return redirect(url_for("select_date"))
     
     # 케이스별 참여 여부 선택 페이지 분기
     if current_user.status is None:
@@ -102,23 +118,39 @@ def participation_choice():
     elif current_user.status == "participate":
         return render_template("participation.html")
 
-@app.route("/select_date/<name>", methods=["GET", "POST"])
-def select_date(name):
+# 각 날짜별 가능한 사람 수
+availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
+
+# 각 날짜별 투표 내역
+votes = {}
+
+@app.route("/select_date", methods=["GET", "POST"])
+@login_required  # 로그인된 사용자만 접근 가능
+def select_date():
     if request.method == "POST":
         selected_dates = request.form.getlist("dates")
         if selected_dates:
-            # 날짜 선택 저장
-            if name in votes:
-                for date in votes[name]:
-                    availability[date] -= 1
-                votes[name] = []  # 이전 투표 초기화
-            votes[name] = selected_dates
+            # 기존 사용자의 투표 삭제
+            Vote.query.filter_by(user_id=current_user.id).delete()
+
+            # 새로운 투표 추가
             for date in selected_dates:
-                availability[date] += 1
+                vote = Vote(user_id=current_user.id, date=date)
+                db.session.add(vote)
+            db.session.commit()
+
             flash("날짜 투표가 적용되었습니다.")
         else:
             flash("날짜를 먼저 선택하세요.")
-    return render_template("select_date.html", name=name, availability=availability)
+
+    # 날짜별 참여자 수 계산
+    availability = {f"2024-12-{day:02d}": Vote.query.filter_by(date=f"2024-12-{day:02d}").count() for day in range(17, 32)}
+
+    # # 기존 템플릿에서 사용하는 데이터 구조 유지
+    # votes = {current_user.name: user_votes}
+
+    return render_template("select_date.html", name=current_user.name, availability=availability)
+
 
 @app.route("/recommend_restaurant/<name>", methods=["GET", "POST"])
 def recommend_restaurant(name):
