@@ -1,4 +1,6 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
+from flask_sqlalchemy import SQLAlchemy
+from flask.json import jsonify  # flask.json에서 명시적으로 가져옴
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
@@ -15,42 +17,96 @@ availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
 restaurants = []  # [{"link": "http://example.com", "type": "중식당", "votes": 0, "voters": []}]
 restaurant_votes = {}
 
+#DB
+# 데이터베이스 설정
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user_status.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+
+db = SQLAlchemy(app)
+
+# 데이터베이스 모델 정의
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(80), unique=True, nullable=False)
+    status = db.Column(db.String(20), nullable=True)  # 상태값: "participate", "not_participate", 또는 None
+    employee_number = db.Column(db.String(20), nullable=True)  # 사내번호
+
+# 데이터베이스 초기화
+with app.app_context():
+    db.create_all()
+    # 기본 데이터 추가
+    default_users = [
+        {"name": "김상은", "employee_number": "172"},
+        {"name": "김서정", "employee_number": "293"},
+        {"name": "이찬", "employee_number": "185"},
+        {"name": "황유림", "employee_number": "042"},
+        {"name": "이현아", "employee_number": "025"},
+        {"name": "유정화", "employee_number": "051"},
+        {"name": "박종현", "employee_number": "175"},
+        {"name": "김지수", "employee_number": "071"},
+        {"name": "박지원", "employee_number": "174"},
+        {"name": "임하경", "employee_number": "226"}
+    ]
+
+    for user_data in default_users:
+        if not User.query.filter_by(name=user_data["name"]).first():
+            user = User(name=user_data["name"], employee_number=user_data["employee_number"], status=None)
+            db.session.add(user)
+    db.session.commit()
+
 user_status = {}
 
 @app.route("/", methods=["GET", "POST"])
 def name_entry():
     if request.method == "POST":
         name = request.form.get("name")
-        if name in valid_names:
-            # 현재 상태 확인
-            status = user_status.get(name, None)
-            if status == "not_participate":
+        employee_number = request.form.get("employee_number")
+
+        # 사용자 정보 조회
+        user = User.query.filter_by(name=name, employee_number=employee_number).first()
+
+        if user:
+            if user.status == "not_participate":
                 flash("현재 '미참여' 상태입니다. 변경하시겠습니까?")
-                return redirect(url_for("participation_choice", name=name))
-            elif status == "participate":
+            elif user.status == "participate":
                 flash("현재 '참여' 상태입니다. 변경하시겠습니까?")
-                return redirect(url_for("participation_choice", name=name))
-            else:
-                return redirect(url_for("participation_choice", name=name))
+            elif user.status is None:
+                flash("참석 여부를 말해주세요")
+            return redirect(url_for("participation_choice"))
         else:
-            flash("등록된 사용자가 아닙니다.")
+            flash("사용자 정보를 찾을 수 없습니다.")
+            return redirect(url_for("name_entry"))
+
     return render_template("name_entry.html")
 
 
-@app.route("/participation_choice/<name>", methods=["GET", "POST"])
-def participation_choice(name):
+@app.route("/participation_choice", methods=["GET", "POST"])
+def participation_choice():
     if request.method == "POST":
+        # POST 요청에 대한 처리 (예: 상태 변경)
         choice = request.form.get("choice")
-        if choice == "participate":
-            user_status[name] = "participate"
-            flash("참여 상태로 변경되었습니다.")
-            return redirect(url_for("select_date", name=name))
-        elif choice == "not_participate":
-            user_status[name] = "not_participate"
-            flash("미참여 상태로 변경되었습니다.")
-            return redirect(url_for("name_entry"))
-    current_status = user_status.get(name, "none")  # 현재 상태 가져오기
-    return render_template("participation_choice.html", name=name, current_status=current_status)
+
+        # 완료 후 다시 선택 페이지로 리디렉션
+        return redirect(url_for("participation_choice"))
+
+    return render_template("participation_choice.html")
+
+
+
+# @app.route("/participation_choice/<name>", methods=["GET", "POST"])
+# def participation_choice(name):
+#     if request.method == "POST":
+#         choice = request.form.get("choice")
+#         if choice == "participate":
+#             user_status[name] = "participate"
+#             flash("참여 상태로 변경되었습니다.")
+#             return redirect(url_for("select_date", name=name))
+#         elif choice == "not_participate":
+#             user_status[name] = "not_participate"
+#             flash("미참여 상태로 변경되었습니다.")
+#             return redirect(url_for("name_entry"))
+#     current_status = user_status.get(name, "none")  # 현재 상태 가져오기
+#     return render_template("participation_choice.html", name=name, current_status=current_status)
 
 
 
