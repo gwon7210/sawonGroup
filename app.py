@@ -13,14 +13,8 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "name_entry"  # 로그인되지 않은 사용자가 접근 시 리디렉션할 뷰
 
-
 # 각 날짜별 가능한 사람 수
 availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
-
-# 식당 추천 및 투표
-restaurants = []  # [{"link": "http://example.com", "type": "중식당", "votes": 0, "voters": []}]
-restaurant_votes = {}
-
 
 # Flask-Login 사용자 모델 정의
 class User(UserMixin, db.Model):  # UserMixin 추가
@@ -118,12 +112,6 @@ def participation_choice():
     elif current_user.status == "participate":
         return render_template("participation.html")
 
-# 각 날짜별 가능한 사람 수
-availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
-
-# 각 날짜별 투표 내역
-votes = {}
-
 @app.route("/select_date", methods=["GET", "POST"])
 @login_required  # 로그인된 사용자만 접근 가능
 def select_date():
@@ -146,11 +134,12 @@ def select_date():
     # 날짜별 참여자 수 계산
     availability = {f"2024-12-{day:02d}": Vote.query.filter_by(date=f"2024-12-{day:02d}").count() for day in range(17, 32)}
 
-    # # 기존 템플릿에서 사용하는 데이터 구조 유지
-    # votes = {current_user.name: user_votes}
-
     return render_template("select_date.html", name=current_user.name, availability=availability)
 
+
+# 식당 추천 및 투표
+restaurants = []  # [{"link": "http://example.com", "type": "중식당", "votes": 0, "voters": []}]
+restaurant_votes = {}
 
 @app.route("/recommend_restaurant/<name>", methods=["GET", "POST"])
 def recommend_restaurant(name):
