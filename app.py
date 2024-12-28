@@ -13,9 +13,6 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "name_entry"  # 로그인되지 않은 사용자가 접근 시 리디렉션할 뷰
 
-# # 각 날짜별 가능한 사람 수
-# availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
-
 # Flask-Login 사용자 모델 정의
 class User(UserMixin, db.Model):  # UserMixin 추가
     id = db.Column(db.Integer, primary_key=True)
@@ -31,6 +28,15 @@ class Vote(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     date = db.Column(db.String(20), nullable=False)
+
+# Restaurant 모델 정의
+class Restaurant(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    name = db.Column(db.String(100), nullable=False)
+    link = db.Column(db.String(200), unique=True, nullable=False)
+    type = db.Column(db.String(50), nullable=False)
+    votes = db.Column(db.Integer, default=0)
+    voters = db.Column(db.PickleType, default=[])  # 투표한 사용자 리스트
 
 
 # 데이터베이스 초기화
@@ -137,12 +143,14 @@ def select_date():
     return render_template("select_date.html", name=current_user.name, availability=availability)
 
 
+
 # 식당 추천 및 투표
 restaurants = []  # [{"link": "http://example.com", "type": "중식당", "votes": 0, "voters": []}]
 restaurant_votes = {}
 
-@app.route("/recommend_restaurant/<name>", methods=["GET", "POST"])
-def recommend_restaurant(name):
+@app.route("/recommend_restaurant", methods=["GET", "POST"])
+@login_required
+def recommend_restaurant():
     if request.method == "POST":
         restaurant_names = request.form.getlist("restaurant_name")  # 식당 이름 가져오기
         restaurant_links = request.form.getlist("restaurant_link")
@@ -150,20 +158,20 @@ def recommend_restaurant(name):
 
         # 식당 정보 저장
         for rname, link, rtype in zip(restaurant_names, restaurant_links, restaurant_types):
-            if rname and link and rtype and link not in restaurant_votes:
-                restaurant_votes[link] = {
-                    "name": rname,  # 식당 이름 저장
-                    "link": link,
-                    "type": rtype,
-                    "votes": 0,
-                    "voters": [],
-                }
-                restaurants.append(restaurant_votes[link])
-        return redirect(url_for("vote_restaurant", name=name))
-    return render_template("recommend_restaurant.html", name=name)
+            if rname and link and rtype:
+                existing_restaurant = Restaurant.query.filter_by(link=link).first()
+                if not existing_restaurant:
+                    new_restaurant = Restaurant(name=rname, link=link, type=rtype)
+                    db.session.add(new_restaurant)
+        db.session.commit()
+        return redirect(url_for("vote_restaurant"))
+    return render_template("recommend_restaurant.html", name=current_user.name)
 
-@app.route("/vote_restaurant/<name>", methods=["GET", "POST"])
-def vote_restaurant(name):
+
+@app.route("/vote_restaurant", methods=["GET", "POST"])
+@login_required
+def vote_restaurant():
+    name = current_user.name
     if request.method == "POST":
         selected_restaurant = request.form.get("selected_restaurant")
         if selected_restaurant in restaurant_votes:
@@ -174,9 +182,12 @@ def vote_restaurant(name):
                 restaurant_votes[selected_restaurant]["votes"] += 1
                 restaurant_votes[selected_restaurant]["voters"].append(name)
         return redirect(url_for("vote_restaurant", name=name))
-    sorted_restaurants = sorted(
-        restaurants, key=lambda r: (-r["votes"], r["link"])
-    )
+    
+    sorted_restaurants = Restaurant.query.all()
+
+    # sorted_restaurants = sorted(
+    #     restaurants, key=lambda r: (-r["votes"], r["link"])
+    # )
     return render_template(
         "vote_restaurant.html", name=name, restaurants=sorted_restaurants
     )
