@@ -13,8 +13,8 @@ db = SQLAlchemy(app)
 login_manager = LoginManager(app)
 login_manager.login_view = "name_entry"  # 로그인되지 않은 사용자가 접근 시 리디렉션할 뷰
 
-# 각 날짜별 가능한 사람 수
-availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
+# # 각 날짜별 가능한 사람 수
+# availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
 
 # Flask-Login 사용자 모델 정의
 class User(UserMixin, db.Model):  # UserMixin 추가
