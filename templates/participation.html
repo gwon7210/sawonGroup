@@ -48,17 +48,7 @@
 </head>
 <body>
     <div class="container">
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    {% for message in messages %}
-                        <p>{{ message }}</p>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
         <form method="POST">
-            <button type="submit" name="choice" value="participate">참여로 변경</button>
             <button type="submit" name="choice" value="not_participate">미참여로 변경</button>
         </form>
     </div>

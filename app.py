@@ -1,35 +1,27 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
-from flask.json import jsonify  # flask.json에서 명시적으로 가져옴
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 
-# 허용된 이름 리스트
-valid_names = ["김상은", "김서정", "이찬", "황유림", "이현아", "유정화", "박종현", "김지수", "박지원", "임하경" ]
-# 각 날짜별 투표 내역
-votes = {}
-
-# 각 날짜별 가능한 사람 수
-availability = {f"2024-12-{day:02d}": 0 for day in range(17, 32)}
-
-# 식당 추천 및 투표
-restaurants = []  # [{"link": "http://example.com", "type": "중식당", "votes": 0, "voters": []}]
-restaurant_votes = {}
-
-#DB
 # 데이터베이스 설정
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user_status.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = "name_entry"  # 로그인되지 않은 사용자가 접근 시 리디렉션할 뷰
 
-# 데이터베이스 모델 정의
-class User(db.Model):
+# Flask-Login 사용자 모델 정의
+class User(UserMixin, db.Model):  # UserMixin 추가
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(80), unique=True, nullable=False)
-    status = db.Column(db.String(20), nullable=True)  # 상태값: "participate", "not_participate", 또는 None
-    employee_number = db.Column(db.String(20), nullable=True)  # 사내번호
+    status = db.Column(db.String(20), nullable=True)
+    employee_number = db.Column(db.String(20), nullable=True)
+
+    def get_id(self):
+        return str(self.id)  # 사용자 고유 ID 반환
 
 # 데이터베이스 초기화
 with app.app_context():
@@ -54,7 +46,20 @@ with app.app_context():
             db.session.add(user)
     db.session.commit()
 
-user_status = {}
+
+# 로그인 관리자 콜백
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+
+@app.route("/logout")
+@login_required
+def logout():
+    logout_user()  # 사용자 로그아웃
+    flash("로그아웃되었습니다.")
+    return redirect(url_for("name_entry"))
+
 
 @app.route("/", methods=["GET", "POST"])
 def name_entry():
@@ -66,12 +71,7 @@ def name_entry():
         user = User.query.filter_by(name=name, employee_number=employee_number).first()
 
         if user:
-            if user.status == "not_participate":
-                flash("현재 '미참여' 상태입니다. 변경하시겠습니까?")
-            elif user.status == "participate":
-                flash("현재 '참여' 상태입니다. 변경하시겠습니까?")
-            elif user.status is None:
-                flash("참석 여부를 말해주세요")
+            login_user(user)  # 사용자 로그인
             return redirect(url_for("participation_choice"))
         else:
             flash("사용자 정보를 찾을 수 없습니다.")
@@ -81,35 +81,23 @@ def name_entry():
 
 
 @app.route("/participation_choice", methods=["GET", "POST"])
+@login_required  # 로그인된 사용자만 접근 가능
 def participation_choice():
     if request.method == "POST":
-        # POST 요청에 대한 처리 (예: 상태 변경)
         choice = request.form.get("choice")
-
-        # 완료 후 다시 선택 페이지로 리디렉션
+        current_user.status = choice  # 현재 사용자 상태 업데이트
+        db.session.commit()  # 데이터베이스에 변경사항 저장
         return redirect(url_for("participation_choice"))
+    
+    # 케이스별 참여 여부 선택 페이지 분기
+    if current_user.status is None:
+        return render_template("non_participation.html")
 
-    return render_template("participation_choice.html")
+    elif current_user.status == "not_participate":
+        return render_template("not_participation.html")
 
-
-
-# @app.route("/participation_choice/<name>", methods=["GET", "POST"])
-# def participation_choice(name):
-#     if request.method == "POST":
-#         choice = request.form.get("choice")
-#         if choice == "participate":
-#             user_status[name] = "participate"
-#             flash("참여 상태로 변경되었습니다.")
-#             return redirect(url_for("select_date", name=name))
-#         elif choice == "not_participate":
-#             user_status[name] = "not_participate"
-#             flash("미참여 상태로 변경되었습니다.")
-#             return redirect(url_for("name_entry"))
-#     current_status = user_status.get(name, "none")  # 현재 상태 가져오기
-#     return render_template("participation_choice.html", name=name, current_status=current_status)
-
-
-
+    elif current_user.status == "participate":
+        return render_template("participation.html")
 
 @app.route("/select_date/<name>", methods=["GET", "POST"])
 def select_date(name):
