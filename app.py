@@ -25,6 +25,9 @@ class User(UserMixin, db.Model):  # UserMixin 추가
 
 # 데이터베이스 초기화
 with app.app_context():
+    
+    # 기존 데이터베이스 삭제 (드롭)
+    db.drop_all()
     db.create_all()
     # 기본 데이터 추가
     default_users = [
