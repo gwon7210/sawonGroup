@@ -102,6 +102,9 @@ def participation_choice():
         choice = request.form.get("choice")
         current_user.status = choice  # 현재 사용자 상태 업데이트
         db.session.commit()  # 데이터베이스에 변경사항 저장
+        if current_user.status == "not_participate":
+            return render_template("goodbye.html")
+
         return redirect(url_for("select_date"))
     
     # 케이스별 참여 여부 선택 페이지 분기
