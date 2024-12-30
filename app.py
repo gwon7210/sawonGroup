@@ -117,6 +117,7 @@ def participation_choice():
     elif current_user.status == "participate":
         return render_template("participation.html")
 
+
 @app.route("/select_date", methods=["GET", "POST"])
 @login_required  # 로그인된 사용자만 접근 가능
 def select_date():
@@ -136,11 +137,15 @@ def select_date():
         else:
             flash("날짜를 먼저 선택하세요.")
 
-    # 날짜별 참여자 수 계산
-    availability = {f"2024-12-{day:02d}": Vote.query.filter_by(date=f"2024-12-{day:02d}").count() for day in range(17, 32)}
+    # 날짜별 참여자 수와 이름 계산
+    availability = {}
+    for day in range(17, 32):
+        date_str = f"2024-12-{day:02d}"
+        votes = Vote.query.filter_by(date=date_str).all()
+        voters = [User.query.get(vote.user_id).name for vote in votes]
+        availability[date_str] = {"count": len(voters), "voters": voters}
 
     return render_template("select_date.html", name=current_user.name, availability=availability)
-
 
 
 @app.route("/recommend_restaurant", methods=["GET", "POST"])

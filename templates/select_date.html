@@ -26,6 +26,7 @@
             border-radius: 5px;
             border: 1px solid #ddd;
             transition: all 0.3s;
+            position: relative;
         }
         .day[data-availability="0"] { background-color: hsl(120, 100%, 95%); }
         .day[data-availability="1"] { background-color: hsl(120, 80%, 85%); }
@@ -42,6 +43,23 @@
         .day[data-availability="12"] { background-color: hsl(120, 15%, 15%); }
         .day.selected {
             border: 2px solid #ff5722;
+        }
+        .tooltip {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 5px;
+            border-radius: 3px;
+            font-size: 12px;
+            white-space: nowrap;
+            z-index: 100;
+        }
+        .day:hover .tooltip {
+            display: block;
         }
         button {
             margin-top: 20px;
@@ -108,14 +126,17 @@
     <h1>{{ name }}님, 날짜를 선택하세요</h1>
     <form method="POST" onsubmit="return checkDatesSelected(event)">
         <div class="calendar">
-            {% for date, count in availability.items() %}
+            {% for date, info in availability.items() %}
                 <div 
                     class="day" 
                     id="day-{{ date }}" 
-                    data-availability="{{ count }}" 
+                    data-availability="{{ info.count }}" 
                     onclick="toggleDate('{{ date }}')">
                     {{ date }}<br>
-                    가능 인원: {{ count }}
+                    가능 인원: {{ info.count }}
+                    <div class="tooltip">
+                        투표자: {{ info.voters | join(', ') }}
+                    </div>
                     <input type="checkbox" name="dates" value="{{ date }}" id="checkbox-{{ date }}" style="display: none;">
                 </div>
             {% endfor %}
@@ -127,4 +148,3 @@
     </form>
 </body>
 </html>
-
