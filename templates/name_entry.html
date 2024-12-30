@@ -67,15 +67,6 @@
 <body>
     <div class="form-container">
         <h1>회식 날짜와 식당 정하기</h1>
-        <div class="flash-messages">
-            {% with messages = get_flashed_messages() %}
-                {% if messages %}
-                    {% for message in messages %}
-                        <p>{{ message }}</p>
-                    {% endfor %}
-                {% endif %}
-            {% endwith %}
-        </div>
         <form method="POST">
             <label for="name">이름 입력:</label>
             <input type="text" id="name" name="name" value="박지원" placeholder="이름을 입력하세요" required>
