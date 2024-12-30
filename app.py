@@ -1,12 +1,13 @@
 from flask import Flask, render_template, request, redirect, url_for, flash
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from sqlalchemy.dialects.postgresql import JSON  # PostgreSQL의 JSON 타입 사용
 
 app = Flask(__name__)
 app.secret_key = "your_secret_key"
 
-# 데이터베이스 설정
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///user_status.db'
+# PostgreSQL 데이터베이스 설정
+app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://noah:password@localhost:5432/sawongroup'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 
 db = SQLAlchemy(app)
@@ -31,18 +32,14 @@ class Vote(db.Model):
 
 # Restaurant 모델 정의
 class Restaurant(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
+    link = db.Column(db.String(200), primary_key=True, nullable=False)  # 고유키로 설정
     name = db.Column(db.String(100), nullable=False)
-    link = db.Column(db.String(200), unique=True, nullable=False)
     type = db.Column(db.String(50), nullable=False)
     votes = db.Column(db.Integer, default=0)
-    voters = db.Column(db.PickleType, default=[])  # 투표한 사용자 리스트
-
+    voters = db.Column(db.String, default="")
 
 # 데이터베이스 초기화
 with app.app_context():
-
-    # 기존 데이터베이스 삭제 (드롭)
     db.drop_all()
     db.create_all()
     # 기본 데이터 추가
@@ -64,7 +61,6 @@ with app.app_context():
             user = User(name=user_data["name"], employee_number=user_data["employee_number"], status=None)
             db.session.add(user)
     db.session.commit()
-
 
 # 로그인 관리자 콜백
 @login_manager.user_loader
@@ -144,10 +140,6 @@ def select_date():
 
 
 
-# 식당 추천 및 투표
-restaurants = []  # [{"link": "http://example.com", "type": "중식당", "votes": 0, "voters": []}]
-restaurant_votes = {}
-
 @app.route("/recommend_restaurant", methods=["GET", "POST"])
 @login_required
 def recommend_restaurant():
@@ -171,27 +163,33 @@ def recommend_restaurant():
 @app.route("/vote_restaurant", methods=["GET", "POST"])
 @login_required
 def vote_restaurant():
-    name = current_user.name
-    if request.method == "POST":
-        selected_restaurant = request.form.get("selected_restaurant")
-        if selected_restaurant in restaurant_votes:
-            if name in restaurant_votes[selected_restaurant]["voters"]:
-                restaurant_votes[selected_restaurant]["votes"] -= 1
-                restaurant_votes[selected_restaurant]["voters"].remove(name)
-            else:
-                restaurant_votes[selected_restaurant]["votes"] += 1
-                restaurant_votes[selected_restaurant]["voters"].append(name)
-        return redirect(url_for("vote_restaurant", name=name))
-    
-    sorted_restaurants = Restaurant.query.all()
 
-    # sorted_restaurants = sorted(
-    #     restaurants, key=lambda r: (-r["votes"], r["link"])
-    # )
+    if request.method == "POST":
+        selected_restaurant_link = request.form.get("selected_restaurant")
+        selected_restaurant = Restaurant.query.get(selected_restaurant_link)
+
+        if selected_restaurant:
+            
+            if current_user.name in selected_restaurant.voters.split(","):
+                selected_restaurant.votes -= 1
+                voters_list = selected_restaurant.voters.split(",")
+                voters_list.remove(current_user.name)
+                selected_restaurant.voters = ",".join(voters_list)
+            else:
+                selected_restaurant.votes += 1
+                voters_list = selected_restaurant.voters.split(",") if selected_restaurant.voters else []
+                voters_list.append(current_user.name)
+                selected_restaurant.voters = ",".join(voters_list)
+            db.session.commit()
+            print("After commit and refresh:", selected_restaurant.voters)
+
+        return redirect(url_for("vote_restaurant", name=current_user.name))
+
+    sorted_restaurants = Restaurant.query.order_by(Restaurant.votes.desc()).all()
+
     return render_template(
-        "vote_restaurant.html", name=name, restaurants=sorted_restaurants
+        "vote_restaurant.html", name=current_user.name, restaurants=sorted_restaurants
     )
 
 if __name__ == "__main__":
     app.run(debug=True)
-
