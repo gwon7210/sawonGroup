@@ -2,79 +2,93 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>날짜 선택</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            background-color: #f3f4f6;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
             padding: 20px;
+            background-color: #fefefe;
+            color: #1c1c1e;
         }
         h1 {
             text-align: center;
+            font-size: 22px;
+            font-weight: 600;
             margin-bottom: 20px;
+            color: #333;
         }
         .calendar {
             display: grid;
             grid-template-columns: repeat(7, 1fr);
-            gap: 10px;
+            gap: 8px;
             margin-top: 20px;
         }
         .day {
-            padding: 15px;
+            padding: 12px;
             text-align: center;
             cursor: pointer;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-            transition: all 0.3s;
+            border-radius: 10px;
+            background-color: #f2f2f7;
+            color: #333;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, background-color 0.2s, z-index 0.2s;
             position: relative;
+            z-index: 1;
         }
-        .day[data-availability="0"] { background-color: hsl(120, 100%, 95%); }
-        .day[data-availability="1"] { background-color: hsl(120, 80%, 85%); }
-        .day[data-availability="2"] { background-color: hsl(120, 70%, 75%); }
-        .day[data-availability="3"] { background-color: hsl(120, 60%, 65%); }
-        .day[data-availability="4"] { background-color: hsl(120, 55%, 55%); }
-        .day[data-availability="5"] { background-color: hsl(120, 50%, 50%); }
-        .day[data-availability="6"] { background-color: hsl(120, 45%, 45%); }
-        .day[data-availability="7"] { background-color: hsl(120, 40%, 40%); }
-        .day[data-availability="8"] { background-color: hsl(120, 35%, 35%); }
-        .day[data-availability="9"] { background-color: hsl(120, 30%, 30%); }
-        .day[data-availability="10"] { background-color: hsl(120, 25%, 25%); }
-        .day[data-availability="11"] { background-color: hsl(120, 20%, 20%); }
-        .day[data-availability="12"] { background-color: hsl(120, 15%, 15%); }
+        .day:hover {
+            transform: scale(1.05);
+            background-color: #e5e5ea;
+            z-index: 10;
+        }
+        .day[data-availability="0"] { background-color: #e0f7df; }
+        .day[data-availability="1"] { background-color: #c2eec0; }
+        .day[data-availability="2"] { background-color: #a3e6a0; }
+        .day[data-availability="3"] { background-color: #86dc82; }
+        .day[data-availability="4"] { background-color: #69d463; }
+        .day[data-availability="5"] { background-color: #4dcc45; }
         .day.selected {
-            border: 2px solid #ff5722;
+            border: 2px solid #007aff;
+            background-color: #d1ecff;
         }
         .tooltip {
             display: none;
             position: absolute;
-            top: 100%;
+            top: 110%;
             left: 50%;
             transform: translateX(-50%);
             background-color: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 5px;
-            border-radius: 3px;
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 8px;
             font-size: 12px;
             white-space: nowrap;
-            z-index: 100;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            z-index: 10;
         }
         .day:hover .tooltip {
             display: block;
         }
         button {
             margin-top: 20px;
-            padding: 10px 20px;
+            padding: 14px;
             border: none;
-            background-color: #007bff;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
             color: white;
-            border-radius: 5px;
+            background-color: #007aff;
             cursor: pointer;
-        }
-        button.hidden {
-            display: none;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s ease, box-shadow 0.3s ease;
         }
         button:hover {
             background-color: #0056b3;
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        button.hidden {
+            display: none;
         }
     </style>
     <script>
@@ -99,7 +113,6 @@
                 return false;
             }
 
-            // 상태를 localStorage에 저장
             localStorage.setItem('voteCompleted', 'true');
             updateRecommendButtonVisibility();
             return true;
@@ -116,7 +129,6 @@
             }
         }
 
-        // 페이지 로드 시 버튼 상태 업데이트
         window.onload = function () {
             updateRecommendButtonVisibility();
         };
